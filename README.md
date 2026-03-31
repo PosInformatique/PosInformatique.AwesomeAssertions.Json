@@ -4,6 +4,10 @@ PosInformatique.AwesomeAssertions.Json is a library to assert JSON serialization
 
 [![Nuget](https://img.shields.io/nuget/v/PosInformatique.AwesomeAssertions.Json?label=PosInformatique.AwesomeAssertions.Json)](https://www.nuget.org/packages/PosInformatique.AwesomeAssertions.Json/)
 
+This version is a clone of the original [PosInformatique.AwesomeAssertions.Json](https://www.nuget.org/packages/PosInformatique.AwesomeAssertions.Json/) library
+to support the [Awesome Assertions](https://awesomeassertions.org/) library after the [FluentAssertions](https://fluentassertions.com/)
+library has become a commercial library since the version 8.0.0.
+
 ## Installing from NuGet
 
 The [PosInformatique.AwesomeAssertions.Json](https://www.nuget.org/packages/PosInformatique.AwesomeAssertions.Json/)

@@ -21,4 +21,4 @@ jobs:
         run: dotnet build --property:Configuration=Debug "PosInformatique.AwesomeAssertions.Json.slnx"
 
       - name: Test with the dotnet CLI
-        run: dotnet test --property:Configuration=Debug "PosInformatique.AwesomeAssertions.Json.slnx"
+        run: dotnet test --property:Configuration=Debug --solution "PosInformatique.AwesomeAssertions.Json.slnx"

@@ -7,6 +7,10 @@
 
     <!-- Disable the StyleCop 'XML comment analysis is disabled due to project configuration' warning. -->
     <NoWarn>$(NoWarn);SA0001</NoWarn>
+
+    <!-- Force to use Microsoft Testing Platform Runner -->
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+    <EnableVSTestRunner>false</EnableVSTestRunner>
   </PropertyGroup>
 
   <ItemGroup>

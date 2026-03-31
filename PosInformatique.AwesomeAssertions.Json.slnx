@@ -1,0 +1,21 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".gitignore" />
+    <File Path="CodeCoverage.runsettings" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="LICENSE" />
+    <File Path="README.md" />
+    <File Path="stylecop.json" />
+  </Folder>
+  <Folder Name="/Solution Items/.github/" />
+  <Folder Name="/Solution Items/.github/workflows/">
+    <File Path=".github/workflows/github-actions-ci.yaml" />
+    <File Path=".github/workflows/github-actions-release.yml" />
+  </Folder>
+  <Folder Name="/Solution Items/tests/">
+    <File Path="tests/.editorconfig" />
+  </Folder>
+  <Project Path="src/AwesomeAssertions.Json/AwesomeAssertions.Json.csproj" />
+  <Project Path="tests/AwesomeAssertions.Json.Tests/AwesomeAssertions.Json.Tests.csproj" />
+</Solution>

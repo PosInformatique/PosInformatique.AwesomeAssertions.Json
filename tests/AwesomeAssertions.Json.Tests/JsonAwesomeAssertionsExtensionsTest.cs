@@ -1,0 +1,2514 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="JsonAwesomeAssertionsExtensionsTest.cs" company="P.O.S Informatique">
+//     Copyright (c) P.O.S Informatique. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+
+namespace AwesomeAssertions.Tests
+{
+    using System.Text.Json;
+    using System.Text.Json.Serialization;
+    using PosInformatique.AwesomeAssertions.Json;
+
+    public class JsonAwesomeAssertionsExtensionsTest
+    {
+        private enum EnumTest
+        {
+            A,
+            B = 100,
+            C = 200,
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void BeJsonSerializableInto(bool booleanValue)
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "The string value",
+                Int32Property = 1234,
+                BooleanProperty = booleanValue,
+                NullProperty = null,
+                InnerObject = new JsonSerializableClassInnerObject()
+                {
+                    InnerStringProperty = "Inner string value",
+                },
+                CollectionInt32 = new List<int>
+                {
+                    10,
+                    20,
+                },
+                CollectionObjects = new List<JsonSerializableClassInnerObject>()
+                {
+                    new JsonSerializableClassInnerObject()
+                    {
+                        InnerStringProperty = "Inner object 1",
+                    },
+                    new JsonSerializableClassInnerObject()
+                    {
+                        InnerStringProperty = "Inner object 2",
+                    },
+                },
+            };
+
+            json.Should().BeJsonSerializableInto(new
+            {
+                string_property = "The string value",
+                int32_property = 1234,
+                boolean_property = booleanValue,
+                null_property = (string)null,
+                inner_object = new
+                {
+                    inner_string_property = "Inner string value",
+                },
+                collection_int = new[]
+                {
+                    10,
+                    20,
+                },
+                collection_object = new[]
+                {
+                    new
+                    {
+                        inner_string_property = "Inner object 1",
+                    },
+                    new
+                    {
+                        inner_string_property = "Inner object 2",
+                    },
+                },
+            });
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_StringPropertyValueDifferent()
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "Actual value",
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto(new
+                {
+                    string_property = "Expected value",
+                });
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("$.string_property: Expected 'Expected value' instead of 'Actual value'.");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_Int32PropertyValueDifferent()
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "Actual value",
+                Int32Property = 1234,
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto(new
+                {
+                    string_property = "Actual value",
+                    int32_property = 100,
+                });
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("$.int32_property: Expected '100' instead of '1234'.");
+        }
+
+        [Theory]
+        [InlineData(true, "True", "False")]
+        [InlineData(false, "False", "True")]
+        public void BeJsonSerializableInto_BooleanPropertyValueDifferent(bool value, string actualValueString, string expectedValueString)
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "Actual value",
+                Int32Property = 1234,
+                BooleanProperty = value,
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto(new
+                {
+                    string_property = "Actual value",
+                    int32_property = 1234,
+                    boolean_property = !value,
+                });
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage($"$.boolean_property: Expected '{expectedValueString}' instead of '{actualValueString}'.");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_NullPropertyValueDifferent()
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "Actual value",
+                Int32Property = 1234,
+                BooleanProperty = true,
+                NullProperty = null,
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto(new
+                {
+                    string_property = "Actual value",
+                    int32_property = 1234,
+                    boolean_property = true,
+                    null_property = "Not null",
+                });
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("$.null_property: Expected property to be 'String' type instead of 'Null' type.");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_InnerObjectDifferentValue()
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "The string value",
+                Int32Property = 1234,
+                BooleanProperty = true,
+                NullProperty = null,
+                InnerObject = new JsonSerializableClassInnerObject()
+                {
+                    InnerStringProperty = "Inner string value",
+                },
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto(new
+                {
+                    string_property = "The string value",
+                    int32_property = 1234,
+                    boolean_property = true,
+                    null_property = (string)null,
+                    inner_object = new
+                    {
+                        inner_string_property = "Other inner string value",
+                    },
+                });
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("$.inner_object.inner_string_property: Expected 'Other inner string value' instead of 'Inner string value'.");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_CollectionDifferentItemValue()
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "The string value",
+                Int32Property = 1234,
+                BooleanProperty = true,
+                NullProperty = null,
+                InnerObject = new JsonSerializableClassInnerObject()
+                {
+                    InnerStringProperty = "Inner string value",
+                },
+                CollectionInt32 = new List<int>
+                {
+                    10,
+                    20,
+                },
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto(new
+                {
+                    string_property = "The string value",
+                    int32_property = 1234,
+                    boolean_property = true,
+                    null_property = (string)null,
+                    inner_object = new
+                    {
+                        inner_string_property = "Inner string value",
+                    },
+                    collection_int = new[]
+                    {
+                        10,
+                        1234,
+                    },
+                });
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("$.collection_int[1]: Expected '1234' instead of '20'.");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_CollectionMissingItemDotNetClass()
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "The string value",
+                Int32Property = 1234,
+                BooleanProperty = true,
+                NullProperty = null,
+                InnerObject = new JsonSerializableClassInnerObject()
+                {
+                    InnerStringProperty = "Inner string value",
+                },
+                CollectionInt32 = new List<int>
+                {
+                    10,
+                },
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto(new
+                {
+                    string_property = "The string value",
+                    int32_property = 1234,
+                    boolean_property = true,
+                    null_property = (string)null,
+                    inner_object = new
+                    {
+                        inner_string_property = "Inner string value",
+                    },
+                    collection_int = new[]
+                    {
+                        10,
+                        1234,
+                    },
+                });
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("$.collection_int: Expected 2 item(s) but found 1.");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_CollectionMissingItemJson()
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "The string value",
+                Int32Property = 1234,
+                BooleanProperty = true,
+                NullProperty = null,
+                InnerObject = new JsonSerializableClassInnerObject()
+                {
+                    InnerStringProperty = "Inner string value",
+                },
+                CollectionInt32 = new List<int>
+                {
+                    10,
+                    20,
+                },
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto(new
+                {
+                    string_property = "The string value",
+                    int32_property = 1234,
+                    boolean_property = true,
+                    null_property = (string)null,
+                    inner_object = new
+                    {
+                        inner_string_property = "Inner string value",
+                    },
+                    collection_int = new[]
+                    {
+                        10,
+                    },
+                });
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("$.collection_int: Expected 1 item(s) but found 2.");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_PropertyTypeDifferent_String()
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "Actual value",
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto(new
+                {
+                    string_property = new { },
+                });
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("$.string_property: Expected property to be 'Object' type instead of 'String' type.");
+        }
+
+        [Theory]
+        [InlineData("Expected string", "String")]
+        [InlineData(null, "Null")]
+        public void BeJsonSerializableInto_PropertyTypeDifferent_Number(object expectedValue, string expectedTypeMessage)
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "String value",
+                Int32Property = 1234,
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto(new
+                {
+                    string_property = "String value",
+                    int32_property = expectedValue,
+                });
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage($"$.int32_property: Expected property to be '{expectedTypeMessage}' type instead of 'Number' type.");
+        }
+
+        [Theory]
+        [InlineData(true, "True")]
+        [InlineData(false, "False")]
+        public void BeJsonSerializableInto_PropertyTypeDifferent_Boolean(bool value, string insteadOfMessageString)
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "String value",
+                Int32Property = 1234,
+                BooleanProperty = value,
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto(new
+                {
+                    string_property = "String value",
+                    int32_property = 1234,
+                    boolean_property = new { },
+                });
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage($"$.boolean_property: Expected property to be 'Object' type instead of '{insteadOfMessageString}' type.");
+        }
+
+        [Theory]
+        [InlineData("String value", "String")]
+        [InlineData(12.34, "Number")]
+        [InlineData(1234, "Number")]
+        [InlineData(true, "True")]
+        [InlineData(false, "False")]
+        [InlineData(null, "Null")]
+        public void BeJsonSerializableInto_PropertyTypeDifferent_Object(object value, string expectedKindMessage)
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "String value",
+                Int32Property = 1234,
+                BooleanProperty = true,
+                NullProperty = null,
+                InnerObject = new JsonSerializableClassInnerObject(),
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto(new
+                {
+                    string_property = "String value",
+                    int32_property = 1234,
+                    boolean_property = true,
+                    null_property = (int?)null,
+                    inner_object = value,
+                });
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage($"$.inner_object: Expected property to be '{expectedKindMessage}' type instead of 'Object' type.");
+        }
+
+        [Theory]
+        [InlineData("String value", "String")]
+        [InlineData(12.34, "Number")]
+        [InlineData(1234, "Number")]
+        [InlineData(true, "True")]
+        [InlineData(false, "False")]
+        [InlineData(null, "Null")]
+        public void BeJsonSerializableInto_PropertyTypeDifferent_Array(object value, string expectedKindMessage)
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "String value",
+                Int32Property = 1234,
+                BooleanProperty = true,
+                NullProperty = null,
+                InnerObject = new JsonSerializableClassInnerObject() { InnerStringProperty = "Inner string" },
+                CollectionInt32 = new List<int> { 1, 2 },
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto(new
+                {
+                    string_property = "String value",
+                    int32_property = 1234,
+                    boolean_property = true,
+                    null_property = (int?)null,
+                    inner_object = new { inner_string_property = "Inner string" },
+                    collection_int = value,
+                });
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage($"$.collection_int: Expected property to be '{expectedKindMessage}' type instead of 'Array' type.");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_PropertyNameDifferent()
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "Actual value",
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto(new
+                {
+                    string_property_other_name = "Different value",
+                });
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("$: Expected property with the 'string_property_other_name' name but found 'string_property' instead.");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_DotNetPropertyMissing()
+        {
+            var json = new JsonSerializableClassInnerObject()
+            {
+                InnerStringProperty = "Actual value",
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto(new
+                {
+                    inner_string_property = "Actual value",
+                    new_property = "Should not exists",
+                });
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("$: Expected 'new_property' property but found no property.");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_JsonPropertyMissing()
+        {
+            var json = new JsonSerializableClassInnerObject()
+            {
+                InnerStringProperty = "Actual value",
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto(new
+                {
+                });
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("$: Expected no property but found 'inner_string_property' property.");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_NullSubject()
+        {
+            var json = (object)null;
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto(new { });
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("A JSON object was expected.");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_NullSubjectAndNullExpected()
+        {
+            var json = (object)null;
+
+            json.Should().BeJsonSerializableInto((object)null);
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_WithNoSpecificOptions()
+        {
+            var json = new JsonSerializableClassWithEnum()
+            {
+                Int32Property = 10,
+                EnumProperty = EnumTest.B,
+            };
+
+            json.Should().BeJsonSerializableInto(new
+            {
+                int32_property = 10,
+                enum_property = 100,
+            });
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_WithSpecificOptions()
+        {
+            var json = new JsonSerializableClassWithEnum()
+            {
+                Int32Property = 10,
+                EnumProperty = EnumTest.B,
+            };
+
+            var options = new JsonSerializerOptions()
+            {
+                Converters =
+                {
+                    new JsonStringEnumConverter(),
+                },
+            };
+
+            json.Should().BeJsonSerializableInto(
+                new
+                {
+                    int32_property = 10,
+                    enum_property = "B",
+                },
+                options);
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_WithDefaultOptionsChanged()
+        {
+            var oldConfig = AwesomeAssertionsJson.Configuration;
+
+            AwesomeAssertionsJson.Configuration = new AwesomeAssertionsJsonConfiguration();
+            AwesomeAssertionsJson.Configuration.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+
+            try
+            {
+                var json = new JsonSerializableClassWithEnum()
+                {
+                    Int32Property = 10,
+                    EnumProperty = EnumTest.B,
+                };
+
+                json.Should().BeJsonSerializableInto(new
+                {
+                    int32_property = 10,
+                    enum_property = "B",
+                });
+            }
+            finally
+            {
+                AwesomeAssertionsJson.Configuration = oldConfig;
+            }
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_WithDelegateOptions()
+        {
+            var dummyConverter = new DummyJsonConverter();
+
+            var oldConfig = AwesomeAssertionsJson.Configuration;
+
+            AwesomeAssertionsJson.Configuration = new AwesomeAssertionsJsonConfiguration();
+            AwesomeAssertionsJson.Configuration.JsonSerializerOptions.Converters.Add(dummyConverter);
+
+            try
+            {
+                var json = new JsonSerializableClassWithEnum()
+                {
+                    Int32Property = 10,
+                    EnumProperty = EnumTest.B,
+                };
+
+                json.Should().BeJsonSerializableInto(
+                    new
+                    {
+                        int32_property = 10,
+                        enum_property = "B",
+                    },
+                    opt =>
+                    {
+                        opt.Converters.Should().Contain(dummyConverter);
+                        opt.Converters.Remove(dummyConverter);
+                        opt.Converters.Add(new JsonStringEnumConverter());
+                    });
+            }
+            finally
+            {
+                AwesomeAssertionsJson.Configuration = oldConfig;
+            }
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_WithPolymorphism()
+        {
+            var point = new ThreeDimensionalPoint()
+            {
+                X = 1,
+                Y = 2,
+                Z = 3,
+                Attributes = new Dictionary<string, object>
+                {
+                    { "Attribute1", "Value 1" },
+                    { "Attribute2", 2 },
+                },
+            };
+
+            point.Should().BeJsonSerializableInto<BasePoint>(
+                new
+                {
+                    myType = "3d",
+                    X = 1,
+                    Y = 2,
+                    Z = 3,
+                    Attributes = new
+                    {
+                        Attribute1 = "Value 1",
+                        Attribute2 = 2,
+                    },
+                });
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_WithPolymorphism_WithOptions()
+        {
+            var point = new ThreeDimensionalPoint()
+            {
+                X = 1,
+                Y = 2,
+                Z = 3,
+                Attributes = new Dictionary<string, object>
+                {
+                    { "Attribute1", "Value 1" },
+                    { "Attribute2", 2 },
+                },
+            };
+
+            point.Should().BeJsonSerializableInto<BasePoint>(
+                new
+                {
+                    myType = "3d",
+                    x = 1,
+                    y = 2,
+                    z = 3,
+                    attributes = new
+                    {
+                        Attribute1 = "Value 1",
+                        Attribute2 = 2,
+                    },
+                },
+                new JsonSerializerOptions()
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                });
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_WithPolymorphism_AndConfigureOptions()
+        {
+            var point = new ThreeDimensionalPoint()
+            {
+                X = 1,
+                Y = 2,
+                Z = 3,
+                Attributes = new Dictionary<string, object>
+                {
+                    { "Attribute1", "Value 1" },
+                    { "Attribute2", 2 },
+                },
+            };
+
+            point.Should().BeJsonSerializableInto<BasePoint>(
+                new
+                {
+                    myType = "3d",
+                    x = 1,
+                    y = 2,
+                    z = 3,
+                    attributes = new
+                    {
+                        Attribute1 = "Value 1",
+                        Attribute2 = 2,
+                    },
+                },
+                opt =>
+                {
+                    opt.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                });
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_WithPolymorphism_WithWrongInheritance()
+        {
+            var point = new ThreeDimensionalPoint()
+            {
+                X = 1,
+                Y = 2,
+                Z = 3,
+            };
+
+            var act = () =>
+            {
+                point.Should().BeJsonSerializableInto<string>(
+                    new
+                    {
+                        myType = "3d",
+                    });
+            };
+
+            act.Should().ThrowExactly<ArgumentException>()
+                .WithMessage("The 'System.String' class is not a base class of the 'AwesomeAssertions.Tests.JsonAwesomeAssertionsExtensionsTest+ThreeDimensionalPoint' type. (Parameter 'TBase')")
+                .And.ParamName.Should().Be("TBase");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_WithPolymorphism_ObjectProperty()
+        {
+            var point = new ClassWithPolymorphicObjectProperty()
+            {
+                Point = new ThreeDimensionalPoint()
+                {
+                    X = 1,
+                    Y = 2,
+                    Z = 3,
+                    Attributes = new Dictionary<string, object>
+                    {
+                        { "Attribute1", "Value 1" },
+                        { "Attribute2", 2 },
+                    },
+                },
+            };
+
+            point.Should().BeJsonSerializableInto(
+                new
+                {
+                    point = new
+                    {
+                        myType = "3d",
+                        X = 1,
+                        Y = 2,
+                        Z = 3,
+                        Attributes = new
+                        {
+                            Attribute1 = "Value 1",
+                            Attribute2 = 2,
+                        },
+                    },
+                });
+        }
+
+        [Theory]
+        [InlineData(1234)]
+        [InlineData("The string")]
+        public void BeJsonSerializableInto_WithObjectProperty(object value)
+        {
+            var obj = new ClassWithObjectProperty()
+            {
+                Inner = new InnerClassWithObjectProperty()
+                {
+                    ObjectProperty = value,
+                },
+            };
+
+            obj.Should().BeJsonSerializableInto(
+                new
+                {
+                    inner = new
+                    {
+                        object_property = value,
+                    },
+                    collection_of_inner = (string)null,
+                });
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void BeJsonSerializableInto_RawStringLiteral(bool booleanValue)
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "The string value",
+                Int32Property = 1234,
+                BooleanProperty = booleanValue,
+                NullProperty = null,
+                InnerObject = new JsonSerializableClassInnerObject()
+                {
+                    InnerStringProperty = "Inner string value",
+                },
+                CollectionInt32 = new List<int>
+                {
+                    10,
+                    20,
+                },
+                CollectionObjects = new List<JsonSerializableClassInnerObject>()
+                {
+                    new JsonSerializableClassInnerObject()
+                    {
+                        InnerStringProperty = "Inner object 1",
+                    },
+                    new JsonSerializableClassInnerObject()
+                    {
+                        InnerStringProperty = "Inner object 2",
+                    },
+                },
+            };
+
+            json.Should().BeJsonSerializableInto($$"""
+                {
+                    "string_property": "The string value",
+                    "int32_property": 1234,
+                    "boolean_property": {{booleanValue.ToString().ToLowerInvariant()}},
+                    "null_property": null,
+                    "inner_object":
+                    {
+                        "inner_string_property": "Inner string value"
+                    },
+                    "collection_int":
+                    [
+                        10,
+                        20
+                    ],
+                    "collection_object":
+                    [
+                        {
+                            "inner_string_property": "Inner object 1"
+                        },
+                        {
+                            "inner_string_property": "Inner object 2"
+                        }
+                    ]
+                }
+                """);
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_RawStringLiteral_StringPropertyValueDifferent()
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "Actual value",
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto("""
+                {
+                    "string_property": "Expected value"
+                }
+                """);
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("$.string_property: Expected 'Expected value' instead of 'Actual value'.");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_RawStringLiteral_Int32PropertyValueDifferent()
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "Actual value",
+                Int32Property = 1234,
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto("""
+                {
+                    "string_property": "Actual value",
+                    "int32_property": 100
+                }
+                """);
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("$.int32_property: Expected '100' instead of '1234'.");
+        }
+
+        [Theory]
+        [InlineData(true, "false", "True", "False")]
+        [InlineData(false, "true", "False", "True")]
+        public void BeJsonSerializableInto_RawStringLiteral_BooleanPropertyValueDifferent(bool value, string jsonValue, string actualValueString, string expectedValueString)
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "Actual value",
+                Int32Property = 1234,
+                BooleanProperty = value,
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto($$"""
+                {
+                    "string_property": "Actual value",
+                    "int32_property": 1234,
+                    "boolean_property": {{jsonValue}}
+                }
+                """);
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage($"$.boolean_property: Expected property to be '{expectedValueString}' type instead of '{actualValueString}' type.");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_RawStringLiteral_NullPropertyValueDifferent()
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "Actual value",
+                Int32Property = 1234,
+                BooleanProperty = true,
+                NullProperty = null,
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto("""
+                {
+                    "string_property": "Actual value",
+                    "int32_property": 1234,
+                    "boolean_property": true,
+                    "null_property": "Not null"
+                }
+                """);
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("$.null_property: Expected property to be 'String' type instead of 'Null' type.");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_RawStringLiteral_InnerObjectDifferentValue()
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "The string value",
+                Int32Property = 1234,
+                BooleanProperty = true,
+                NullProperty = null,
+                InnerObject = new JsonSerializableClassInnerObject()
+                {
+                    InnerStringProperty = "Inner string value",
+                },
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto("""
+                {
+                    "string_property": "The string value",
+                    "int32_property": 1234,
+                    "boolean_property": true,
+                    "null_property": null,
+                    "inner_object":
+                    {
+                        "inner_string_property": "Other inner string value"
+                    }
+                }
+                """);
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("$.inner_object.inner_string_property: Expected 'Other inner string value' instead of 'Inner string value'.");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_RawStringLiteral_CollectionDifferentItemValue()
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "The string value",
+                Int32Property = 1234,
+                BooleanProperty = true,
+                NullProperty = null,
+                InnerObject = new JsonSerializableClassInnerObject()
+                {
+                    InnerStringProperty = "Inner string value",
+                },
+                CollectionInt32 = new List<int>
+                {
+                    10,
+                    20,
+                },
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto("""
+                {
+                    "string_property": "The string value",
+                    "int32_property": 1234,
+                    "boolean_property": true,
+                    "null_property": null,
+                    "inner_object":
+                    {
+                        "inner_string_property": "Inner string value"
+                    },
+                    "collection_int":
+                    [
+                        10,
+                        1234
+                    ]
+                }
+                """);
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("$.collection_int[1]: Expected '1234' instead of '20'.");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_RawStringLiteral_CollectionMissingItemDotNetClass()
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "The string value",
+                Int32Property = 1234,
+                BooleanProperty = true,
+                NullProperty = null,
+                InnerObject = new JsonSerializableClassInnerObject()
+                {
+                    InnerStringProperty = "Inner string value",
+                },
+                CollectionInt32 = new List<int>
+                {
+                    10,
+                },
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto("""
+                {
+                    "string_property": "The string value",
+                    "int32_property": 1234,
+                    "boolean_property": true,
+                    "null_property": null,
+                    "inner_object":
+                    {
+                        "inner_string_property": "Inner string value"
+                    },
+                    "collection_int":
+                    [
+                        10,
+                        1234
+                    ]
+                }
+                """);
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("$.collection_int: Expected 2 item(s) but found 1.");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_RawStringLiteral_CollectionMissingItemJson()
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "The string value",
+                Int32Property = 1234,
+                BooleanProperty = true,
+                NullProperty = null,
+                InnerObject = new JsonSerializableClassInnerObject()
+                {
+                    InnerStringProperty = "Inner string value",
+                },
+                CollectionInt32 = new List<int>
+                {
+                    10,
+                    20,
+                },
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto("""
+                {
+                    "string_property": "The string value",
+                    "int32_property": 1234,
+                    "boolean_property": true,
+                    "null_property": null,
+                    "inner_object":
+                    {
+                        "inner_string_property": "Inner string value"
+                    },
+                    "collection_int":
+                    [
+                        10
+                    ]
+                }
+                """);
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("$.collection_int: Expected 1 item(s) but found 2.");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_RawStringLiteral_PropertyTypeDifferent_String()
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "Actual value",
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto(new
+                {
+                    string_property = new { },
+                });
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("$.string_property: Expected property to be 'Object' type instead of 'String' type.");
+        }
+
+        [Theory]
+        [InlineData("\"Expected string\"", "String")]
+        [InlineData("null", "Null")]
+        public void BeJsonSerializableInto_RawStringLiteral_PropertyTypeDifferent_Number(string expectedJsonValue, string expectedTypeMessage)
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "String value",
+                Int32Property = 1234,
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto($$"""
+                {
+                    "string_property": "String value",
+                    "int32_property": {{expectedJsonValue}}
+                }
+                """);
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage($"$.int32_property: Expected property to be '{expectedTypeMessage}' type instead of 'Number' type.");
+        }
+
+        [Theory]
+        [InlineData(true, "True")]
+        [InlineData(false, "False")]
+        public void BeJsonSerializableInto_RawStringLiteral_PropertyTypeDifferent_Boolean(bool value, string insteadOfMessageString)
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "String value",
+                Int32Property = 1234,
+                BooleanProperty = value,
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto("""
+                {
+                    "string_property": "String value",
+                    "int32_property": 1234,
+                    "boolean_property": { }
+                }
+                """);
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage($"$.boolean_property: Expected property to be 'Object' type instead of '{insteadOfMessageString}' type.");
+        }
+
+        [Theory]
+        [InlineData("\"String value\"", "String")]
+        [InlineData("12.34", "Number")]
+        [InlineData("1234", "Number")]
+        [InlineData("true", "True")]
+        [InlineData("false", "False")]
+        [InlineData("null", "Null")]
+        public void BeJsonSerializableInto_RawStringLiteral_PropertyTypeDifferent_Object(string expectedJsonValue, string expectedKindMessage)
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "String value",
+                Int32Property = 1234,
+                BooleanProperty = true,
+                NullProperty = null,
+                InnerObject = new JsonSerializableClassInnerObject(),
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto($$"""
+                {
+                    "string_property": "String value",
+                    "int32_property": 1234,
+                    "boolean_property": true,
+                    "null_property": null,
+                    "inner_object": {{expectedJsonValue}}
+                }
+                """);
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage($"$.inner_object: Expected property to be '{expectedKindMessage}' type instead of 'Object' type.");
+        }
+
+        [Theory]
+        [InlineData("\"String value\"", "String")]
+        [InlineData("12.34", "Number")]
+        [InlineData("1234", "Number")]
+        [InlineData("true", "True")]
+        [InlineData("false", "False")]
+        [InlineData("null", "Null")]
+        public void BeJsonSerializableInto_RawStringLiteral_PropertyTypeDifferent_Array(string jsonValue, string expectedKindMessage)
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "String value",
+                Int32Property = 1234,
+                BooleanProperty = true,
+                NullProperty = null,
+                InnerObject = new JsonSerializableClassInnerObject() { InnerStringProperty = "Inner string" },
+                CollectionInt32 = new List<int> { 1, 2 },
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto($$"""
+                {
+                    "string_property": "String value",
+                    "int32_property": 1234,
+                    "boolean_property": true,
+                    "null_property": null,
+                    "inner_object": { "inner_string_property": "Inner string" },
+                    "collection_int": {{jsonValue}}
+                }
+                """);
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage($"$.collection_int: Expected property to be '{expectedKindMessage}' type instead of 'Array' type.");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_RawStringLiteral_PropertyNameDifferent()
+        {
+            var json = new JsonSerializableClass()
+            {
+                StringProperty = "Actual value",
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto("""
+                {
+                    "string_property_other_name": "Different value"
+                }
+                """);
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("$: Expected property with the 'string_property_other_name' name but found 'string_property' instead.");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_RawStringLiteral_DotNetPropertyMissing()
+        {
+            var json = new JsonSerializableClassInnerObject()
+            {
+                InnerStringProperty = "Actual value",
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto("""
+                {
+                    "inner_string_property": "Actual value",
+                    "new_property": "Should not exists"
+                }
+                """);
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("$: Expected 'new_property' property but found no property.");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_RawStringLiteral_JsonPropertyMissing()
+        {
+            var json = new JsonSerializableClassInnerObject()
+            {
+                InnerStringProperty = "Actual value",
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto("""{}""");
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("$: Expected no property but found 'inner_string_property' property.");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_RawStringLiteral_NullSubject()
+        {
+            var json = (object)null;
+
+            var act = () =>
+            {
+                json.Should().BeJsonSerializableInto("""{}""");
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("A JSON object was expected.");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_RawStringLiteral_NullSubjectAndNullExpected()
+        {
+            var json = (object)null;
+
+            json.Should().Invoking(assertions => assertions.BeJsonSerializableInto((string)null))
+                .Should().ThrowExactly<ArgumentNullException>()
+                .WithParameterName("expectedJson");
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_RawStringLiteral_WithNoSpecificOptions()
+        {
+            var json = new JsonSerializableClassWithEnum()
+            {
+                Int32Property = 10,
+                EnumProperty = EnumTest.B,
+            };
+
+            json.Should().BeJsonSerializableInto("""
+            {
+                "int32_property": 10,
+                "enum_property": 100
+            }
+            """);
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_RawStringLiteral_WithSpecificOptions()
+        {
+            var json = new JsonSerializableClassWithEnum()
+            {
+                Int32Property = 10,
+                EnumProperty = EnumTest.B,
+            };
+
+            var options = new JsonSerializerOptions()
+            {
+                Converters =
+                {
+                    new JsonStringEnumConverter(),
+                },
+            };
+
+            json.Should().BeJsonSerializableInto(
+                """
+                {
+                    "int32_property": 10,
+                    "enum_property": "B"
+                }
+                """,
+                options);
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_RawStringLiteral_WithDefaultOptionsChanged()
+        {
+            var oldConfig = AwesomeAssertionsJson.Configuration;
+
+            AwesomeAssertionsJson.Configuration = new AwesomeAssertionsJsonConfiguration();
+            AwesomeAssertionsJson.Configuration.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+
+            try
+            {
+                var json = new JsonSerializableClassWithEnum()
+                {
+                    Int32Property = 10,
+                    EnumProperty = EnumTest.B,
+                };
+
+                json.Should().BeJsonSerializableInto("""
+                {
+                    "int32_property": 10,
+                    "enum_property": "B"
+                }
+                """);
+            }
+            finally
+            {
+                AwesomeAssertionsJson.Configuration = oldConfig;
+            }
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_RawStringLiteral_WithDelegateOptions()
+        {
+            var dummyConverter = new DummyJsonConverter();
+
+            var oldConfig = AwesomeAssertionsJson.Configuration;
+
+            AwesomeAssertionsJson.Configuration = new AwesomeAssertionsJsonConfiguration();
+            AwesomeAssertionsJson.Configuration.JsonSerializerOptions.Converters.Add(dummyConverter);
+
+            try
+            {
+                var json = new JsonSerializableClassWithEnum()
+                {
+                    Int32Property = 10,
+                    EnumProperty = EnumTest.B,
+                };
+
+                json.Should().BeJsonSerializableInto(
+                    """
+                    {
+                        "int32_property": 10,
+                        "enum_property": "B"
+                    }
+                    """,
+                    opt =>
+                    {
+                        opt.Converters.Should().Contain(dummyConverter);
+                        opt.Converters.Remove(dummyConverter);
+                        opt.Converters.Add(new JsonStringEnumConverter());
+                    });
+            }
+            finally
+            {
+                AwesomeAssertionsJson.Configuration = oldConfig;
+            }
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_RawStringLiteral_WithPolymorphism()
+        {
+            var point = new ThreeDimensionalPoint()
+            {
+                X = 1,
+                Y = 2,
+                Z = 3,
+                Attributes = new Dictionary<string, object>
+                {
+                    { "Attribute 1", "Value 1" },
+                    { "Attribute 2", 2 },
+                },
+            };
+
+            point.Should().BeJsonSerializableInto<BasePoint>(
+                """
+                {
+                    "myType": "3d",
+                    "X": 1,
+                    "Y": 2,
+                    "Z": 3,
+                    "Attributes":
+                    {
+                        "Attribute 1": "Value 1",
+                        "Attribute 2": 2
+                    }
+                }
+                """);
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_RawStringLiteral_WithPolymorphism_WithOptions()
+        {
+            var point = new ThreeDimensionalPoint()
+            {
+                X = 1,
+                Y = 2,
+                Z = 3,
+                Attributes = new Dictionary<string, object>
+                {
+                    { "Attribute 1", "Value 1" },
+                    { "Attribute 2", 2 },
+                },
+            };
+
+            point.Should().BeJsonSerializableInto<BasePoint>(
+                """
+                {
+                    "myType": "3d",
+                    "x": 1,
+                    "y": 2,
+                    "z": 3,
+                    "attributes":
+                    {
+                        "Attribute 1": "Value 1",
+                        "Attribute 2": 2
+                    }
+                }
+                """,
+                new JsonSerializerOptions()
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                });
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_RawStringLiteral_WithPolymorphism_AndConfigureOptions()
+        {
+            var point = new ThreeDimensionalPoint()
+            {
+                X = 1,
+                Y = 2,
+                Z = 3,
+                Attributes = new Dictionary<string, object>
+                {
+                    { "Attribute 1", "Value 1" },
+                    { "Attribute 2", 2 },
+                },
+            };
+
+            point.Should().BeJsonSerializableInto<BasePoint>(
+                """
+                {
+                    "myType": "3d",
+                    "x": 1,
+                    "y": 2,
+                    "z": 3,
+                    "attributes":
+                    {
+                        "Attribute 1": "Value 1",
+                        "Attribute 2": 2
+                    }
+                }
+                """,
+                opt =>
+                {
+                    opt.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                });
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_RawStringLiteral_WithObjectProperty_Number()
+        {
+            var obj = new ClassWithObjectProperty()
+            {
+                Inner = new InnerClassWithObjectProperty()
+                {
+                    ObjectProperty = 1234,
+                },
+            };
+
+            obj.Should().BeJsonSerializableInto(
+                """
+                {
+                    "inner":
+                    {
+                        "object_property": 1234
+                    },
+                    "collection_of_inner": null
+                }
+                """);
+        }
+
+        [Fact]
+        public void BeJsonSerializableInto_RawStringLiteral_WithObjectProperty_String()
+        {
+            var obj = new ClassWithObjectProperty()
+            {
+                Inner = new InnerClassWithObjectProperty()
+                {
+                    ObjectProperty = "The string",
+                },
+            };
+
+            obj.Should().BeJsonSerializableInto(
+                """
+                {
+                    "inner":
+                    {
+                        "object_property": "The string"
+                    },
+                    "collection_of_inner": null
+                }
+                """);
+        }
+
+        [Fact]
+        public void BeJsonDeserializableInto()
+        {
+            var json = new
+            {
+                string_property = "The string value",
+                int32_property = 1234,
+                boolean_property = true,
+                null_property = (string)null,
+                inner_object = new
+                {
+                    inner_string_property = "Inner string value",
+                },
+                collection_int = new[]
+                {
+                    10,
+                    20,
+                },
+                collection_object = new[]
+                {
+                    new
+                    {
+                        inner_string_property = "Inner object 1",
+                    },
+                    new
+                    {
+                        inner_string_property = "Inner object 2",
+                    },
+                },
+            };
+
+            var expectedObject = new JsonSerializableClass()
+            {
+                StringProperty = "The string value",
+                Int32Property = 1234,
+                BooleanProperty = true,
+                NullProperty = null,
+                InnerObject = new JsonSerializableClassInnerObject()
+                {
+                    InnerStringProperty = "Inner string value",
+                },
+                CollectionInt32 = new List<int>
+                {
+                    10,
+                    20,
+                },
+                CollectionObjects = new List<JsonSerializableClassInnerObject>()
+                {
+                    new JsonSerializableClassInnerObject()
+                    {
+                        InnerStringProperty = "Inner object 1",
+                    },
+                    new JsonSerializableClassInnerObject()
+                    {
+                        InnerStringProperty = "Inner object 2",
+                    },
+                },
+            };
+
+            json.Should().BeJsonDeserializableInto(expectedObject);
+        }
+
+        [Fact]
+        public void BeJsonDeserializableInto_FromStream()
+        {
+            var json = new
+            {
+                string_property = "The string value",
+                int32_property = 1234,
+                boolean_property = true,
+                null_property = (string)null,
+                inner_object = new
+                {
+                    inner_string_property = "Inner string value",
+                },
+                collection_int = new[]
+                {
+                    10,
+                    20,
+                },
+                collection_object = new[]
+                {
+                    new
+                    {
+                        inner_string_property = "Inner object 1",
+                    },
+                    new
+                    {
+                        inner_string_property = "Inner object 2",
+                    },
+                },
+            };
+
+            using var stream = new MemoryStream();
+
+            JsonSerializer.Serialize(stream, json);
+
+            stream.Position = 0;
+
+            var expectedObject = new JsonSerializableClass()
+            {
+                StringProperty = "The string value",
+                Int32Property = 1234,
+                BooleanProperty = true,
+                NullProperty = null,
+                InnerObject = new JsonSerializableClassInnerObject()
+                {
+                    InnerStringProperty = "Inner string value",
+                },
+                CollectionInt32 = new List<int>
+                {
+                    10,
+                    20,
+                },
+                CollectionObjects = new List<JsonSerializableClassInnerObject>()
+                {
+                    new JsonSerializableClassInnerObject()
+                    {
+                        InnerStringProperty = "Inner object 1",
+                    },
+                    new JsonSerializableClassInnerObject()
+                    {
+                        InnerStringProperty = "Inner object 2",
+                    },
+                },
+            };
+
+            stream.Should().BeJsonDeserializableInto(expectedObject);
+        }
+
+        [Fact]
+        public void BeJsonDeserializableInto_FromStream_WithSpecificOptions()
+        {
+            var json = new
+            {
+                int32_property = 10,
+                enum_property = "B",
+            };
+
+            using var stream = new MemoryStream();
+
+            JsonSerializer.Serialize(stream, json);
+
+            stream.Position = 0;
+
+            var options = new JsonSerializerOptions()
+            {
+                Converters =
+                {
+                    new JsonStringEnumConverter(),
+                },
+            };
+
+            stream.Should().BeJsonDeserializableInto(
+                new JsonSerializableClassWithEnum()
+                {
+                    Int32Property = 10,
+                    EnumProperty = EnumTest.B,
+                },
+                options);
+        }
+
+        [Fact]
+        public void BeJsonDeserializableInto_WithSubjectNullAndExpectedNull()
+        {
+            var json = (object)null;
+
+            var expectedObject = (JsonSerializableClass)null;
+
+            json.Should().BeJsonDeserializableInto(expectedObject);
+        }
+
+        [Fact]
+        public void BeJsonDeserializableInto_WithNoOptions()
+        {
+            var json = new
+            {
+                int32_property = 10,
+                enum_property = 100,
+            };
+
+            json.Should().BeJsonDeserializableInto(
+                new JsonSerializableClassWithEnum()
+                {
+                    Int32Property = 10,
+                    EnumProperty = EnumTest.B,
+                });
+        }
+
+        [Fact]
+        public void BeJsonDeserializableInto_WithSpecificOptions()
+        {
+            var json = new
+            {
+                int32_property = 10,
+                enum_property = "B",
+            };
+
+            var options = new JsonSerializerOptions()
+            {
+                Converters =
+                {
+                    new JsonStringEnumConverter(),
+                },
+            };
+
+            json.Should().BeJsonDeserializableInto(
+                new JsonSerializableClassWithEnum()
+                {
+                    Int32Property = 10,
+                    EnumProperty = EnumTest.B,
+                },
+                options);
+        }
+
+        [Fact]
+        public void BeJsonDeserializableInto_WithDefaultGlobalOptions()
+        {
+            var oldConfig = AwesomeAssertionsJson.Configuration;
+
+            AwesomeAssertionsJson.Configuration = new AwesomeAssertionsJsonConfiguration();
+            AwesomeAssertionsJson.Configuration.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+
+            try
+            {
+                var json = new
+                {
+                    int32_property = 10,
+                    enum_property = "B",
+                };
+
+                json.Should().BeJsonDeserializableInto(
+                    new JsonSerializableClassWithEnum()
+                    {
+                        Int32Property = 10,
+                        EnumProperty = EnumTest.B,
+                    });
+            }
+            finally
+            {
+                AwesomeAssertionsJson.Configuration = oldConfig;
+            }
+        }
+
+        [Fact]
+        public void BeJsonDeserializableInto_WithDelegateOptions()
+        {
+            var dummyConverter = new DummyJsonConverter();
+
+            var oldConfig = AwesomeAssertionsJson.Configuration;
+
+            AwesomeAssertionsJson.Configuration = new AwesomeAssertionsJsonConfiguration();
+            AwesomeAssertionsJson.Configuration.JsonSerializerOptions.Converters.Add(dummyConverter);
+
+            try
+            {
+                var json = new
+                {
+                    int32_property = 10,
+                    enum_property = "B",
+                };
+
+                json.Should().BeJsonDeserializableInto(
+                    new JsonSerializableClassWithEnum()
+                    {
+                        Int32Property = 10,
+                        EnumProperty = EnumTest.B,
+                    },
+                    opt =>
+                    {
+                        opt.Converters.Should().Contain(dummyConverter);
+                        opt.Converters.Remove(dummyConverter);
+                        opt.Converters.Add(new JsonStringEnumConverter());
+                    });
+            }
+            finally
+            {
+                AwesomeAssertionsJson.Configuration = oldConfig;
+            }
+        }
+
+        [Fact]
+        public void BeJsonDeserializableInto_WithAnonymousArray()
+        {
+            var json = new[]
+            {
+                new
+                {
+                    X = 1,
+                    Y = 2,
+                },
+                new
+                {
+                    X = 3,
+                    Y = 4,
+                },
+            };
+
+            json.Should().BeJsonDeserializableInto(
+                new[]
+                {
+                    new BasePoint() { X = 1, Y = 2 },
+                    new BasePoint() { X = 3, Y = 4 },
+                });
+        }
+
+        [Fact]
+        public void BeJsonDeserializableInto_WithAnonymousArray_WithOptions()
+        {
+            var json = new[]
+            {
+                new
+                {
+                    x = 1,
+                    y = 2,
+                },
+                new
+                {
+                    x = 3,
+                    y = 4,
+                },
+            };
+
+            json.Should().BeJsonDeserializableInto(
+                new[]
+                {
+                    new BasePoint() { X = 1, Y = 2 },
+                    new BasePoint() { X = 3, Y = 4 },
+                },
+                new JsonSerializerOptions()
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                });
+        }
+
+        [Fact]
+        public void BeJsonDeserializableInto_WithAnonymousArray_WithOptionsConfigure()
+        {
+            var json = new[]
+            {
+                new
+                {
+                    x = 1,
+                    y = 2,
+                },
+                new
+                {
+                    x = 3,
+                    y = 4,
+                },
+            };
+
+            json.Should().BeJsonDeserializableInto(
+                new[]
+                {
+                    new BasePoint() { X = 1, Y = 2 },
+                    new BasePoint() { X = 3, Y = 4 },
+                },
+                opt =>
+                {
+                    opt.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                });
+        }
+
+        [Theory]
+        [InlineData(1234, 1234)]
+        [InlineData(1234, 1234.0)]
+        [InlineData(1234.0, 1234)]
+        [InlineData("The string", "The string")]
+        [InlineData(12.32, 12.32)]
+        public void BeJsonDeserializableInto_WithObjectProperty(object value, object expectedValue)
+        {
+            var json = new
+            {
+                inner = new
+                {
+                    object_property = value,
+                },
+                collection_of_inner = new[]
+                {
+                    new
+                    {
+                        object_property = value,
+                    },
+                    new
+                    {
+                        object_property = value,
+                    },
+                },
+            };
+
+            json.Should().BeJsonDeserializableInto(new ClassWithObjectProperty()
+            {
+                Inner = new InnerClassWithObjectProperty()
+                {
+                    ObjectProperty = expectedValue,
+                },
+                InnerCollection = new List<InnerClassWithObjectProperty>()
+                {
+                    new InnerClassWithObjectProperty()
+                    {
+                        ObjectProperty = expectedValue,
+                    },
+                    new InnerClassWithObjectProperty()
+                    {
+                        ObjectProperty = expectedValue,
+                    },
+                },
+            });
+        }
+
+        [Theory]
+        [InlineData(1234)]
+        [InlineData(12.34)]
+        public void BeJsonDeserializableInto_WithObjectProperty_Number_Different(object value)
+        {
+            var json = new
+            {
+                inner = new
+                {
+                    object_property = value,
+                },
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonDeserializableInto(new ClassWithObjectProperty()
+                {
+                    Inner = new InnerClassWithObjectProperty()
+                    {
+                        ObjectProperty = 8888,
+                    },
+                });
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage($"$.inner.object_property: Expected '8888' instead of '{value}'.");
+        }
+
+        [Theory]
+        [InlineData(1234)]
+        [InlineData(12.34)]
+        public void BeJsonDeserializableInto_WithObjectProperty_Number_WrongType(object value)
+        {
+            var json = new
+            {
+                inner = new
+                {
+                    object_property = value,
+                },
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonDeserializableInto(new ClassWithObjectProperty()
+                {
+                    Inner = new InnerClassWithObjectProperty()
+                    {
+                        ObjectProperty = "Other type",
+                    },
+                });
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage($"$.inner.object_property: Expected property to be 'String' type instead of 'Number' type.");
+        }
+
+        [Fact]
+        public void BeJsonDeserializableInto_WithObjectProperty_String_Different()
+        {
+            var json = new
+            {
+                inner = new
+                {
+                    object_property = "The actual string",
+                },
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonDeserializableInto(new ClassWithObjectProperty()
+                {
+                    Inner = new InnerClassWithObjectProperty()
+                    {
+                        ObjectProperty = "The expected string",
+                    },
+                });
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("$.inner.object_property: Expected 'The expected string' instead of 'The actual string'.");
+        }
+
+        [Fact]
+        public void BeJsonDeserializableInto_WithObjectProperty_String_WrongType()
+        {
+            var json = new
+            {
+                inner = new
+                {
+                    object_property = "The actual string",
+                },
+            };
+
+            var act = () =>
+            {
+                json.Should().BeJsonDeserializableInto(new ClassWithObjectProperty()
+                {
+                    Inner = new InnerClassWithObjectProperty()
+                    {
+                        ObjectProperty = 1234,
+                    },
+                });
+            };
+
+            act.Should().ThrowExactly<JsonAssertionFailedException>()
+                .WithMessage("$.inner.object_property: Expected property to be 'Number' type instead of 'String' type.");
+        }
+
+        [Fact]
+        public void BeJsonDeserializableInto_WithArrayOfString()
+        {
+            var json = new[] { "A", "B", "C" };
+
+            json.Should().BeJsonDeserializableInto(new[] { "A", "B", "C" });
+        }
+
+        [Fact]
+        public void BeJsonDeserializableInto_WithArrayOfString_WithOptions()
+        {
+            var json = new[] { "A", "B", "C" };
+
+            json.Should().BeJsonDeserializableInto(
+                new[] { "A", "B", "C" },
+                new JsonSerializerOptions()
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                });
+        }
+
+        [Fact]
+        public void BeJsonDeserializableInto_ArrayOfString_WithOptionsConfigure()
+        {
+            var json = new[] { "A", "B", "C" };
+
+            json.Should().BeJsonDeserializableInto(
+                new[] { "A", "B", "C" },
+                opt =>
+                {
+                    opt.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                });
+        }
+
+        [Fact]
+        public void BeJsonDeserializableInto_PrimitiveValues()
+        {
+            var json2 = 1234;
+
+            json2.Should().BeJsonDeserializableInto(1234);
+
+            var json3 = 12.34;
+
+            json3.Should().BeJsonDeserializableInto(12.34);
+        }
+
+        [Fact]
+        public void BeJsonDeserializableInto_PrimitiveValues_WithOptions()
+        {
+            var json2 = 1234;
+
+            json2.Should().BeJsonDeserializableInto(1234, new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+
+            var json3 = 12.34;
+
+            json3.Should().BeJsonDeserializableInto(12.34, new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        }
+
+        [Fact]
+        public void BeJsonDeserializableInto_PrimitiveValues_WithOptionsConfigure()
+        {
+            var json2 = 1234;
+
+            json2.Should().BeJsonDeserializableInto(
+                1234,
+                opt =>
+                {
+                    opt.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                });
+
+            var json3 = 12.34;
+
+            json3.Should().BeJsonDeserializableInto(
+                12.34,
+                opt =>
+                {
+                    opt.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                });
+        }
+
+        [Fact]
+        public void BeJsonDeserializableInto_FromRawLiteralString()
+        {
+            var json = """
+            {
+                "inner":
+                {
+                    "object_property": "The actual string"
+                }
+            }
+            """;
+
+            json.Should().BeJsonDeserializableInto(new
+            {
+                inner = new
+                {
+                    object_property = "The actual string",
+                },
+            });
+        }
+
+        [Fact]
+        public void BeJsonDeserializableInto_FromRawLiteralString_WithOptions()
+        {
+            var json = """
+            {
+                "inner":
+                {
+                    "object_property": "The actual string"
+                }
+            }
+            """;
+
+            json.Should().BeJsonDeserializableInto(
+                new
+                {
+                    Inner = new
+                    {
+                        Object_property = "The actual string",
+                    },
+                },
+                new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        }
+
+        [Fact]
+        public void BeJsonDeserializableInto_FromRawLiteralString_WithOptionsConfigure()
+        {
+            var json = """
+            {
+                "inner":
+                {
+                    "object_property": "The actual string"
+                }
+            }
+            """;
+
+            json.Should().BeJsonDeserializableInto(
+                new
+                {
+                    Inner = new
+                    {
+                        Object_property = "The actual string",
+                    },
+                },
+                opt =>
+                {
+                    opt.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                });
+        }
+
+        [Fact]
+        public void BeJsonDeserializableInto_WithPolymorphism()
+        {
+            var json =
+                """
+                {
+                    "myType": "3d",
+                    "X": 1,
+                    "Y": 2,
+                    "Z": 3,
+                    "Attributes":
+                    {
+                        "Attribute1": "Value 1",
+                        "Attribute2": 2
+                    }
+                }
+                """;
+
+            json.Should().BeJsonDeserializableInto(
+                new ThreeDimensionalPoint()
+                {
+                    X = 1,
+                    Y = 2,
+                    Z = 3,
+                    Attributes = new Dictionary<string, object>
+                    {
+                        { "Attribute1", "Value 1" },
+                        { "Attribute2", 2 },
+                    },
+                });
+        }
+
+        [Fact]
+        public void BeJsonDeserializableInto_WithPolymorphism_ObjectProperty()
+        {
+            var json =
+                """
+                {
+                    "point":
+                    {
+                        "myType": "3d",
+                        "X": 1,
+                        "Y": 2,
+                        "Z": 3,
+                        "Attributes":
+                        {
+                            "Attribute1": "Value 1",
+                            "Attribute2": 2
+                        }
+                    }
+                }
+                """;
+
+            json.Should().BeJsonDeserializableInto(
+                new ClassWithPolymorphicObjectProperty()
+                {
+                    Point = new ThreeDimensionalPoint()
+                    {
+                        X = 1,
+                        Y = 2,
+                        Z = 3,
+                        Attributes = new Dictionary<string, object>
+                        {
+                            { "Attribute1", "Value 1" },        // Should throw exception for this value...
+                            { "Attribute2", 2 },
+                        },
+                    },
+                });
+        }
+
+        private class JsonSerializableClass
+        {
+            [JsonPropertyName("string_property")]
+            public string StringProperty { get; set; }
+
+            [JsonPropertyName("int32_property")]
+            public int Int32Property { get; set; }
+
+            [JsonPropertyName("boolean_property")]
+            public bool BooleanProperty { get; set; }
+
+            [JsonPropertyName("null_property")]
+            public string NullProperty { get; set; }
+
+            [JsonPropertyName("inner_object")]
+            public JsonSerializableClassInnerObject InnerObject { get; set; }
+
+            [JsonPropertyName("collection_int")]
+            [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+            public List<int> CollectionInt32 { get; set; }
+
+            [JsonPropertyName("collection_object")]
+            public List<JsonSerializableClassInnerObject> CollectionObjects { get; set; }
+
+            [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+            public string IgnoredProperty
+            {
+                get => throw new NotImplementedException();
+                set => throw new NotImplementedException();
+            }
+        }
+
+        private class JsonSerializableClassInnerObject
+        {
+            [JsonPropertyName("inner_string_property")]
+            [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+            public string InnerStringProperty { get; set; }
+
+            [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+            public string InnerIgnoredProperty
+            {
+                get => throw new NotImplementedException();
+                set => throw new NotImplementedException();
+            }
+        }
+
+        private class JsonSerializableClassWithEnum
+        {
+            [JsonPropertyName("int32_property")]
+            public int Int32Property { get; set; }
+
+            [JsonPropertyName("enum_property")]
+            public EnumTest EnumProperty { get; set; }
+        }
+
+        private class DummyJsonConverter : JsonConverter<string>
+        {
+            public override string Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        [JsonPolymorphic(TypeDiscriminatorPropertyName = "myType")]
+        [JsonDerivedType(typeof(ThreeDimensionalPoint), typeDiscriminator: "3d")]
+        private class BasePoint
+        {
+            [JsonPropertyOrder(1)]
+            public int X { get; set; }
+
+            [JsonPropertyOrder(2)]
+            public int Y { get; set; }
+        }
+
+        private class ThreeDimensionalPoint : BasePoint
+        {
+            [JsonPropertyOrder(3)]
+            public int Z { get; set; }
+
+            [JsonPropertyOrder(4)]
+            public Dictionary<string, object> Attributes { get; set; }
+        }
+
+        private class ClassWithPolymorphicObjectProperty
+        {
+            [JsonPropertyName("point")]
+            public BasePoint Point { get; set; }
+        }
+
+        private class ClassWithObjectProperty
+        {
+            [JsonPropertyName("inner")]
+            public InnerClassWithObjectProperty Inner { get; set; }
+
+            [JsonPropertyName("collection_of_inner")]
+            public List<InnerClassWithObjectProperty> InnerCollection { get; set; }
+        }
+
+        private class InnerClassWithObjectProperty
+        {
+            [JsonPropertyName("object_property")]
+            public object ObjectProperty { get; set; }
+        }
+    }
+}

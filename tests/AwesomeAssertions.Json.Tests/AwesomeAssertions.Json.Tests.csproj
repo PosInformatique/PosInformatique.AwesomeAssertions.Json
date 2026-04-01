@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <OutputType>Exe</OutputType>
+
+    <!-- Disable the StyleCop 'XML comment analysis is disabled due to project configuration' warning. -->
+    <NoWarn>$(NoWarn);SA0001</NoWarn>
+
+    <!-- Force to use Microsoft Testing Platform Runner -->
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+    <EnableVSTestRunner>false</EnableVSTestRunner>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
+    <PackageReference Include="xunit.v3.mtp-v2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\AwesomeAssertions.Json\AwesomeAssertions.Json.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>
